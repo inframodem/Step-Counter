@@ -26,14 +26,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private var MY_PERMISSIONS_REQUEST_ACTIVITY_RECOGNITION = 143
 
+    //Program creation function
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
+        //Loads in past steps and accesses button functions
         loadSteps()
         resetAndPause()
+        //initiate sensor manager
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-
+        //load state to handle screen orientation change
         if(savedInstanceState != null){
             currentSteps = savedInstanceState.getInt("CURRENT_STEPS", 0)
             button2.text = ("$currentSteps")
@@ -46,13 +48,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume(){
     super.onResume()
-    running = true
-    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
-            != PackageManager.PERMISSION_GRANTED) {
-        ActivityCompat.requestPermissions(this,
-                arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
-                MY_PERMISSIONS_REQUEST_ACTIVITY_RECOGNITION)
-    }
+        //Check and request permission for activity recognition
+        running = true
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
+                    MY_PERMISSIONS_REQUEST_ACTIVITY_RECOGNITION)
+        }
+        //register step counter if the device has one
         var stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
         if(stepSensor == null){
@@ -64,28 +68,33 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     }
 
+    //stop running and un register sensor
     override fun onPause(){
         super.onPause()
         running = false
         sensorManager?.unregisterListener(this)
     }
 
+    //when step counter increases
     override fun onSensorChanged(event: SensorEvent?) {
+        //if active
         if(running && !isOff){
             sessionSteps = event!!.values[0]
             currentSteps = sessionSteps.toInt() - previousSessionSteps.toInt()
             button2.text = ("$currentSteps")
         }
+        //if paused
         if(running && isOff){
             sessionSteps = event!!.values[0]
             previousSessionSteps += ((sessionSteps - currentSteps.toFloat()) - previousSessionSteps)
         }
     }
-
+    //not used
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
 
     }
 
+    //handles pausing and reseting
     private fun resetAndPause(){
          button2.setOnClickListener{
             isOff = !isOff
@@ -103,19 +112,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
              true
          }
     }
-
+    //saves previous state to maintain a constant baseline
     private fun saveSteps() {
         val sharedPreferences = getSharedPreferences("Prefs", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         editor.putFloat("stepKey", previousSessionSteps)
         editor.apply()
     }
+    //loads previous state to maintain a constant baseline
     private fun loadSteps() {
         val sharedPreferences = getSharedPreferences("Prefs", Context.MODE_PRIVATE)
         val savedSteps = sharedPreferences.getFloat("stepKey", 0f)
         previousSessionSteps = savedSteps;
     }
-
+    //Keeps variables in case of screen rotation
     override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
         super.onSaveInstanceState(outState, outPersistentState)
         outState.putInt("CURRENT_STEPS", currentSteps)
